@@ -697,9 +697,10 @@ RSpec.describe Dependabot::GoModules::FileUpdater::GoModUpdater do
         end
 
         it "raises the correct error" do
-          error_class = Dependabot::PrivateSourceAuthenticationFailure
           expect { updater.updated_go_sum_content }.
-            to raise_error(error_class) do |error|
+            to raise_error do |error|
+            expect(error).to be_a(Dependabot::PrivateSourceAuthenticationFailure) |
+                             be_a(Dependabot::GitDependenciesNotReachable)
             expect(error.message).to include("dependabot-fixtures/go-modules-private")
           end
         end
