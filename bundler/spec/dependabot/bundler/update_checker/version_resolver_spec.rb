@@ -47,7 +47,7 @@ RSpec.describe Dependabot::Bundler::UpdateChecker::VersionResolver do
   end
   let(:source) { nil }
   let(:requirement_string) { ">= 0" }
-  let(:rubygems_url) { "https://index.rubygems.org/api/v1/" }
+  let(:rubygems_url) { "https://rubygems.org/api/v1/" }
 
   describe "#latest_resolvable_version_details" do
     subject { resolver.latest_resolvable_version_details }
