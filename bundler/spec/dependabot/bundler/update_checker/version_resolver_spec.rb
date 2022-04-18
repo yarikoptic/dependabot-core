@@ -232,7 +232,7 @@ RSpec.describe Dependabot::Bundler::UpdateChecker::VersionResolver do
         let(:requirement_string) { ">= 0" }
 
         let(:dependency_files) { bundler_project_dependency_files("version_conflict_with_listed_subdep") }
-        its([:version]) { is_expected.to eq(Gem::Version.new("3.6.0")) }
+        its([:version]) { is_expected.to eq(Gem::Version.new("3.11.1")) }
       end
 
       context "with a legacy Ruby which disallows the latest version" do
