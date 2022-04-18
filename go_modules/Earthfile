@@ -1,0 +1,59 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-go_modules
+
+ARG GOLANG_VERSION=1.18
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH="${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}"
+    
+    DO ../common+CREATE_DEPENDABOT_USER
+    
+    COPY --chown=dependabot:dependabot +go/go "$DEPENDABOT_NATIVE_HELPERS_PATH/go"
+    ENV PATH="$DEPENDABOT_NATIVE_HELPERS_PATH/go/bin:$PATH"
+
+    COPY --chown=dependabot:dependabot +helpers/helper $DEPENDABOT_NATIVE_HELPERS_PATH/go_modules/bin/helper
+
+go:
+    FROM golang:$GOLANG_VERSION-buster
+
+    SAVE ARTIFACT /usr/local/go
+
+helpers:
+    FROM +go
+
+    ENV GOOS="$TARGETOS"
+    ENV GOARCH="$TARGETARCH"
+
+    COPY --dir helpers .
+
+    WORKDIR helpers
+
+    RUN go build -o "../helper" \
+     && go clean -cache
+
+    SAVE ARTIFACT ../helper
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+    DO +SETUP
+
+    DO ../common+CONFIGURE_GIT_USER
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

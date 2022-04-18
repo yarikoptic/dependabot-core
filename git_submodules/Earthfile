@@ -1,0 +1,22 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-git_submodules
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

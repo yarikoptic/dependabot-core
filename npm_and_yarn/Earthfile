@@ -1,0 +1,75 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-npm_and_yarn
+
+ENV DEPENDABOT_NATIVE_HELPERS_PATH="/opt"
+
+ARG NODE_MAJOR_VERSION="16"
+ARG NPM_VERSION="8.5.1"
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH="${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}"
+
+    USER root
+
+    RUN curl -sL "https://deb.nodesource.com/setup_$NODE_MAJOR_VERSION.x" \
+            | bash - \
+     && apt-get update \
+     && apt-get install -y --no-install-recommends nodejs \
+     && rm -rf /var/lib/apt/lists/* \
+     && npm install -g "npm@v$NPM_VERSION" \
+     && rm -rf ~/.npm
+
+    DO ../common+CREATE_DEPENDABOT_USER
+    COPY --chown=dependabot:dependabot +helpers/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/npm_and_yarn
+
+helpers:
+    FROM "node:$NODE_MAJOR_VERSION-bullseye"
+
+    COPY --dir helpers .
+
+    WORKDIR helpers
+
+    RUN npm ci --no-audit --fetch-timeout=600000 --fetch-retries=5
+
+    SAVE ARTIFACT . helpers
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    BUILD +test-source
+    BUILD +test-helpers
+
+test-source:
+    FROM +deps
+    DO +SETUP
+
+    RUN bundle exec rspec spec
+
+test-helpers:
+    FROM +helpers
+
+    RUN npm test
+
+lint:
+    BUILD +lint-source
+    BUILD +lint-helpers
+
+lint-source:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .
+
+lint-helpers:
+    FROM +helpers
+
+    RUN npm run lint

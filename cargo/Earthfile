@@ -1,0 +1,45 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-cargo
+
+ARG RUST_TOOLCHAIN_VERSION="1.59.0"
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH="${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}"
+
+    USER root
+
+    ENV RUSTUP_HOME="$DEPENDABOT_NATIVE_HELPERS_PATH/rust"
+    ENV CARGO_HOME="$DEPENDABOT_NATIVE_HELPERS_PATH/rust"
+
+    DO ../common+CREATE_DEPENDABOT_USER
+
+    RUN mkdir -p "$RUSTUP_HOME" \
+     && chown dependabot:dependabot "$RUSTUP_HOME" \
+     && curl https://sh.rustup.rs -sSf \
+            | sh -s -- -y --default-toolchain "$RUST_TOOLCHAIN_VERSION" --profile minimal
+
+    ENV PATH="$RUSTUP_HOME/bin:$PATH"
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+
+    DO +SETUP
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

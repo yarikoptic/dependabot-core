@@ -1,0 +1,71 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-terraform
+
+ARG TERRAFORM_VERSION=1.1.6
+ARG TERRAFORM_AMD64_CHECKSUM=3e330ce4c8c0434cdd79fe04ed6f6e28e72db44c47ae50d01c342c8a2b05d331
+ARG TERRAFORM_ARM64_CHECKSUM=a53fb63625af3572f7252b9fb61d787ab153132a8984b12f4bb84b8ee408ec53
+
+ARG HCL2JSON_VERSION=0.3.3
+ARG HCL2JSON_CHECKSUM=24068f1e25a34d8f8ca763f34fce11527472891bfa834d1504f665855021d5d4
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH="${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}"
+
+    COPY +helpers/terraform /usr/local/bin
+    COPY +helpers/hcl2json $DEPENDABOT_NATIVE_HELPERS_PATH/terraform/bin/hcl2json
+
+helpers:
+    FROM ubuntu:20.04
+
+    ARG TARGETOS
+    ARG TARGETARCH
+
+    ARG DEBIAN_FRONTEND="noninteractive"
+
+    RUN apt-get update \
+     && apt-get install -y --no-install-recommends \
+          build-essential \
+          ca-certificates \
+          curl \
+          zlib1g-dev \
+          liblzma-dev \
+          unzip \
+     && rm -rf /var/lib/apt/lists/*
+
+    RUN curl -o terraform-${TARGETARCH}.tar.gz \
+            https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip \
+     && echo "$TERRAFORM_AMD64_CHECKSUM  terraform-amd64.tar.gz\n$TERRAFORM_ARM64_CHECKSUM  terraform-arm64.tar.gz\n" \
+            | sha256sum -c --ignore-missing - \
+     && unzip -d terraform terraform-${TARGETARCH}.tar.gz \
+     && rm terraform-${TARGETARCH}.tar.gz
+    SAVE ARTIFACT terraform
+
+    RUN curl -sSLf "https://github.com/tmccombs/hcl2json/releases/download/v${HCL2JSON_VERSION}/hcl2json_${TARGETOS}_${TARGETARCH}" -o hcl2json \
+     && echo "$HCL2JSON_CHECKSUM hcl2json" | sha256sum -c \
+     && chmod +x hcl2json
+    SAVE ARTIFACT hcl2json
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+    DO +SETUP
+
+    DO ../common+CONFIGURE_GIT_USER
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

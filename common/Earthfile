@@ -1,0 +1,62 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-common
+
+CREATE_DEPENDABOT_USER:
+    COMMAND
+
+    ARG uid=1000
+    ARG gid=$uid
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
+
+    RUN groupadd -f --gid "$gid" dependabot \
+     && if ! id -u dependabot; then \
+            useradd --uid "$uid" --gid "$gid" -m dependabot; \
+            mkdir -p $DEPENDABOT_NATIVE_HELPERS_PATH; \
+            chown dependabot:dependabot $DEPENDABOT_NATIVE_HELPERS_PATH; \
+        fi
+
+CONFIGURE_GIT_USER:
+    COMMAND
+
+    ARG name="dependabot-ci"
+    ARG email="no-reply@github.com"
+
+    RUN git config --global user.name "$name" \
+     && git config --global user.email "$email"
+
+shared:
+    FROM scratch
+
+    COPY --dir lib spec common/
+    COPY dependabot-common.gemspec common/
+    SAVE ARTIFACT common
+
+deps:
+    COPY Gemfile *.gemspec .
+    COPY --dir bin lib spec .
+    
+    RUN bundle install --jobs 4 --retry 3
+
+gem:
+    COPY ../+shared/.gitignore ../
+    COPY --dir bin lib spec .
+    COPY Gemfile *.gemspec .
+
+    RUN gem build
+    SAVE ARTIFACT *.gem
+
+test:
+    FROM +deps
+
+    DO +CONFIGURE_GIT_USER
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

@@ -1,0 +1,159 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-bundler
+
+ARG DEPENDABOT_NATIVE_HELPERS_PATH
+ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
+
+ARG RUBY_VERSION=2.7.1
+ARG BUNDLER_V1_VERSION=1.17.3
+ARG BUNDLER_V2_VERSION=2.3.10
+ARG RUBYGEMS_SYSTEM_VERSION=3.2.20
+
+SETUP:
+    COMMAND
+
+    # Install Ruby, update RubyGems, and install Bundler
+    ENV BUNDLE_SILENCE_ROOT_WARNING=1
+    # Disable the outdated rubygems installation from being loaded
+    ENV DEBIAN_DISABLE_RUBYGEMS_INTEGRATION=true
+    # Allow gem installs as the dependabot user
+
+    USER root
+
+    RUN apt-get update \
+     && apt-get install -y --no-install-recommends \
+            software-properties-common \
+     && apt-add-repository ppa:brightbox/ruby-ng \
+     && apt-get update \
+     && apt-get install -y --no-install-recommends \
+            "ruby${RUBY_VERSION%.*}" \
+            "ruby${RUBY_VERSION%.*}-dev" \
+     && rm -rf /var/lib/apt/lists/* \
+     && gem update --system --no-document \
+     && gem install bundler --no-document \
+     && rm -rf /var/lib/gems/*/cache/*
+
+    DO ../common+CREATE_DEPENDABOT_USER
+    COPY --chown=dependabot:dependabot +bundler-v1/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/bundler/v1
+    COPY --chown=dependabot:dependabot +bundler-v2/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/bundler/v2
+
+shared:
+    FROM scratch
+
+    COPY --dir spec/fixtures .
+    SAVE ARTIFACT fixtures
+
+bundler-v1:
+    ARG BUNDLER_VERSION=$BUNDLER_V1_VERSION
+
+    WORKDIR helpers/v1
+    COPY --dir helpers/v1/lib helpers/v1/monkey_patches .
+    COPY helpers/v1/Gemfile .
+    COPY helpers/v1/run.rb .
+
+    RUN gem update --system $RUBYGEMS_SYSTEM_VERSION --no-document && \
+        gem install bundler:$BUNDLER_VERSION --no-document && \
+        bundle config --local without "test" && \
+        bundle install --jobs 4 --retry 3 && \
+        bundle package && \
+        rm -rf /var/lib/gems/*/cache/*
+
+    RUN cd vendor/cache && \
+        gem fetch bundler -v $BUNDLER_VERSION
+
+    SAVE ARTIFACT . helpers
+
+bundler-v2:
+    ARG BUNDLER_VERSION=$BUNDLER_V2_VERSION
+
+    WORKDIR helpers/v2
+    COPY --dir helpers/v2/lib helpers/v2/monkey_patches .
+    COPY helpers/v2/Gemfile .
+    COPY helpers/v2/run.rb .
+
+    RUN gem update --system $RUBYGEMS_SYSTEM_VERSION --no-document \
+     && gem install bundler:$BUNDLER_VERSION --no-document \
+     && bundle config --local without "test" \
+     && bundle install --jobs 4 --retry 3 \
+     && bundle package \
+     && rm -rf /var/lib/gems/*/cache/*
+
+    RUN cd vendor/cache \
+     && gem fetch bundler -v $BUNDLER_VERSION
+
+    SAVE ARTIFACT . helpers
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    BUILD +test-bundler-v1
+    BUILD +test-bundler-v1-helpers
+
+    BUILD +test-bundler-v2
+    BUILD +test-bundler-v2-helpers
+
+test-bundler-v1:
+    FROM +deps
+
+    ENV SUITE_NAME=bundler1
+
+    DO ../common+CONFIGURE_GIT_USER
+
+    COPY +bundler-v1/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/bundler/v1
+
+    RUN bundle exec rspec spec
+
+test-bundler-v2:
+    FROM +deps
+
+    ENV SUITE_NAME=bundler2
+
+    DO ../common+CONFIGURE_GIT_USER
+
+    COPY +bundler-v2/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/bundler/v2
+
+    RUN bundle exec rspec spec
+
+test-bundler-v1-helpers:
+    FROM +bundler-v1
+
+    COPY --dir helpers/v1/spec .
+    COPY --dir +shared/fixtures ../../spec/fixtures
+
+    RUN bundle install --with test
+    RUN bundle exec rspec spec
+
+test-bundler-v2-helpers:
+    FROM +bundler-v2
+
+    COPY --dir helpers/v2/spec .
+    COPY --dir +shared/fixtures ../../spec/fixtures
+
+    RUN bundle install --with test --jobs 4 --retry 3 --no-cache
+    RUN bundle exec rspec spec
+
+lint:
+    BUILD +lint-source
+    BUILD +lint-helpers
+
+lint-source:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .
+
+lint-helpers:
+    FROM +deps
+
+    COPY --dir helpers .
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop helpers

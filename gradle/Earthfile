@@ -1,0 +1,23 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-gradle
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY --dir ../maven+shared/maven ../maven
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

@@ -1,0 +1,63 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-elm
+
+ARG ELM_VERSION="0.19.0"
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
+
+    USER root
+
+    ENV PATH="$DEPENDABOT_NATIVE_HELPERS_PATH/elm/bin:$PATH"
+
+    DO ../common+CREATE_DEPENDABOT_USER
+    COPY --chown=dependabot:dependabot +elm/elm "$DEPENDABOT_NATIVE_HELPERS_PATH/elm/bin/elm19"
+
+elm:
+    FROM ubuntu:20.04
+
+    ARG version="$ELM_VERSION"
+
+    ENV DEBIAN_FRONTEND="noninteractive"
+
+    RUN apt-get update \
+     && apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            zlib1g-dev \
+            liblzma-dev \
+            unzip
+    
+    WORKDIR /tmp
+
+    RUN curl -sSLfO "https://github.com/elm/compiler/releases/download/$version/binaries-for-linux.tar.gz" \
+     && tar xzvf binaries-for-linux.tar.gz \
+     && rm -f binaries-for-linux.tar.gz
+    
+    SAVE ARTIFACT elm
+
+deps:
+    COPY --dir ../common+shared/common ../common
+
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+
+    DO +SETUP
+
+    RUN bundle exec rspec spec
+
+lint:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .

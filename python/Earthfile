@@ -1,0 +1,108 @@
+VERSION 0.6
+FROM ruby:2.7.1
+WORKDIR /dependabot-python
+
+ARG PYTHON_VERSION="3.10.3"
+
+SETUP:
+    COMMAND
+
+    ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
+
+    USER root
+
+    RUN apt-get update && \
+        apt-get install -y --no-install-recommends \
+            libpq-dev \
+            libssl-dev \
+            libbz2-dev \
+            libffi-dev \
+            libreadline-dev \
+            libsqlite3-dev \
+            libcurl4-openssl-dev \
+            llvm \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libmariadb-dev-compat \
+            xz-utils \
+            tk-dev \
+            libxml2-dev \
+            libxmlsec1-dev \
+            libgeos-dev \
+            python3-enchant \
+            python3-pip
+
+    DO ../common+CREATE_DEPENDABOT_USER
+    COPY --chown=dependabot:dependabot +helpers/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/python/helpers
+
+    USER dependabot
+
+    ENV PYENV_ROOT="$DEPENDABOT_NATIVE_HELPERS_PATH/.pyenv"
+    ENV PATH="$PYENV_ROOT/bin:$PATH"
+    
+    RUN git clone https://github.com/pyenv/pyenv.git --branch v2.2.5 --single-branch --depth=1 "$PYENV_ROOT" \
+      && pyenv install "$PYTHON_VERSION" \
+      && pyenv global "$PYTHON_VERSION" \
+      && pyenv exec pip install --upgrade pip \
+      && rm -Rf /tmp/python-build*
+
+    USER root
+
+    COPY --chown=dependabot:dependabot +helpers/venv "$DEPENDABOT_NATIVE_HELPERS_PATH/venv"
+    ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+helpers:
+    FROM python:"$PYTHON_VERSION-slim-buster"
+
+    ENV VIRTUAL_ENV="$DEPENDABOT_NATIVE_HELPERS_PATH/venv"
+    RUN python -m venv $VIRTUAL_ENV
+    ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+    COPY --dir helpers .
+
+    WORKDIR helpers
+
+    RUN pip install -r "requirements.txt"
+
+    # Workaround of https://github.com/python-poetry/poetry/issues/3010
+    # By default poetry config file is stored under ~/.config/pypoetry
+    # and is not bound to any specific Python version
+    RUN poetry config experimental.new-installer false
+
+    SAVE ARTIFACT . helpers
+    SAVE ARTIFACT $VIRTUAL_ENV venv
+
+deps:
+    COPY --dir ../common+shared/common ../common
+    COPY Gemfile *.gemspec .
+    RUN bundle install --jobs 4 --retry 3
+
+    COPY --dir lib spec .
+
+test:
+    FROM +deps
+    DO +SETUP
+
+    ENV PIPENV_IGNORE_VIRTUALENVS=1
+
+    RUN bundle exec rspec spec
+
+lint:
+    BUILD +lint-source
+    BUILD +lint-helpers
+
+lint-source:
+    FROM +deps
+
+    COPY ../+shared/.rubocop.yml ../
+    COPY .rubocop.yml .
+    RUN bundle exec rubocop .
+
+lint-helpers:
+    FROM alpine/flake8
+
+    WORKDIR /dependabot-python
+
+    COPY --dir helpers .
+    
+    RUN flake8 helpers --count --show-source --statistics
