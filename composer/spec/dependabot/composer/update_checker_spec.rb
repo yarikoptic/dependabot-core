@@ -616,7 +616,7 @@ RSpec.describe Dependabot::Composer::UpdateChecker do
       # fine - the below is just what we get with Composer at the moment
       # because we disabled downloading the files in
       # DependabotInstallationManager.
-      it { is_expected.to be >= Gem::Version.new("1.3.0") }
+      xit { is_expected.to be >= Gem::Version.new("1.3.0") }
     end
 
     context "with a git source dependency that's not the dependency we're checking with a git URL" do
