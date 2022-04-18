@@ -49,8 +49,7 @@ module Dependabot
               # Bundler will pick the matching installed major version
               "BUNDLER_VERSION" => installed_bundler_version(bundler_major_version),
               "BUNDLE_GEMFILE" => File.join(helpers_path, "Gemfile"),
-              # Prevent the GEM_HOME from being set to a folder owned by root
-              "GEM_HOME" => File.join(helpers_path, ".bundle")
+              "GEM_PATH" => File.join(helpers_path, "vendor/cache")
             }
           )
         rescue SharedHelpers::HelperSubprocessFailed => e
