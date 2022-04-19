@@ -35,198 +35,183 @@ Highlights include:
 - Logic to generate updated manifest and lockfiles for a new dependency version
 - Logic to find changelogs, release notes, and commits for a dependency update
 
-## Other Dependabot resources
+### Other Dependabot resources
 
 In addition to this library, you may be interested in the [dependabot-script][dependabot-script] repo,
 which provides a collection of scripts that use this library to update dependencies on GitHub Enterprise, GitLab
 or Azure DevOps
 
-## Cloning the repository
-Clone the repository with Git using:
-
-```
-git clone https://github.com/dependabot/dependabot-core.git
-```
-
-On Windows this might fail with "Filename too long". To solve this, run the
-following commands in the cloned Git repository:
-
-1. `git config core.longpaths true`
-2. `git reset --hard`
-
-You can read more about this in the [Git for Windows wiki](https://github.com/git-for-windows/git/wiki/Git-cannot-create-a-file-or-directory-with-a-long-path).
-
-## Setup
-
-To run all of Dependabot Core, you'll need Ruby, Python, PHP, Elixir, Node, Go,
-Elm, and Rust installed. However, if you just wish to run it for a single
-language you can get away with just having that language and Ruby.
-
-While you can run Dependabot Core without Docker, we provide a development
-Dockerfile that bakes in all required dependencies. In most cases this is the
-best way to work with the project.
-
 ## Running with Docker
 
-Start by pulling the developer image from the [GitHub Container Registry][ghcr-core-dev] and then start the developer shell:
+Some ecosystems in Dependabot Core have specific system dependencies.
+For example, running the `composer` ecosystem requires
+a particular version of `php` and other libraries to be installed.
+As such, we use containers to build and run Dependabot Core.
 
-```shell
-$ docker pull ghcr.io/dependabot/dependabot-core-development:latest
-$ docker tag ghcr.io/dependabot/dependabot-core-development dependabot/dependabot-core-development
-$ bin/docker-dev-shell
-=> running docker development shell
-[dependabot-core-dev] ~/dependabot-core $
-```
+The official Docker images are hosted
+on Docker Hub at [`dependabot/dependabot-core`](https://hub.docker.com/r/dependabot/dependabot-core)
+and on GitHub Container Registry at [`ghcr.io/dependabot/dependabot-core`](https://github.com/dependabot/dependabot-core/pkgs/container/dependabot-core).
 
-### Dry run script
-
-You can use the "dry-run" script to simulate a dependency update job, printing
-the diff that would be generated to the terminal. It takes two positional
-arguments: the package manager and the GitHub repo name (including the
-account):
+You can simulate a dependency update job with the `dry-run` script.
+It takes two positional arguments,
+the package manager and a whole GitHub repo name (i.e. `user/repo`),
+and prints the diff that would be generated to standard output.
 
 ```bash
-$ bin/docker-dev-shell
-=> running docker development shell
-$ bin/dry-run.rb go_modules rsc/quote
+$ docker run -it dependabot/dependabot-core \
+    bin/dry-run.rb go_modules rsc/quote
 => fetching dependency files
 => parsing dependency files
 => updating 2 dependencies
 ...
 ```
 
-Note: If the dependency files are not in the top-level directory, then you must
-also pass the path to the subdirectory as an argument: `--dir /<subdirectory>`.
+> **Note**:
+> If the dependency files are not in the top-level directory,
+> then you must also specify its path with `--dir /path/to/project`.
 
-### Running the tests
+## Developing
 
-Run the tests by running `rspec spec` inside each of the packages, e.g.
+### Cloning the repository
 
-```bash
-$ cd go_modules
-$ bundle exec rspec spec
+Clone the repository with the following command:
+
+```console
+$ git clone https://github.com/dependabot/dependabot-core.git
 ```
 
-Style is enforced by RuboCop. To check for style violations, simply run `rubocop` in
-each of the packages, e.g.
+On Windows,
+this may fail with a "Filename too long" error.
+You can fix this by running the following commands:
 
-```bash
-$ cd go_modules
-$ bundle exec rubocop
+```console
+> cd dependabot-core
+> git config core.longpaths true
+> git reset --hard
 ```
 
-### Making changes to native helpers
+For more information,
+see the [Git for Windows wiki](https://github.com/git-for-windows/git/wiki/Git-cannot-create-a-file-or-directory-with-a-long-path).
 
-Several Dependabot packages make use of 'native helpers', small executables in their host language.
+### Installing Earthly
 
-**Changes to these files are not automatically reflected inside the development container**
+Dependabot Core uses [Earthly](https://earthly.dev/) for build automation.
+You can install Earthly by running the following commands:
 
-Once you have made any edits to the helper files, run the appropriate build script to update the
-installed version with your changes like so:
+```console
+# macOS (requires Docker for Mac and Git)
+$ brew install earthly/earthly/earthly && earthly bootstrap
 
-```bash
-$ bin/docker-dev-shell
-=> running docker development shell
-$ bundler/helpers/v1/build
-$ bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
+# Linux / Windows (WSL 2) (requires Docker and Git)
+$ sudo /bin/sh -c \
+    'wget https://github.com/earthly/earthly/releases/latest/download/earthly-linux-amd64 \
+      -O /usr/local/bin/earthly && \
+     chmod +x /usr/local/bin/earthly && \
+     /usr/local/bin/earthly bootstrap --with-autocomplete'
+```
+
+### Testing and linting
+
+Each ecosystem has its own `Earthfile`
+with instructions for installing system dependencies,
+building native helpers (if needed),
+and running tests.
+
+To test the behavior of a particular ecosystem,
+you can run its `test` target
+
+```console
+$ earthly ./go_modules+test
+```
+
+To check for code style and other violations,
+you can run an ecosystem's `lint` target.
+
+```console
+$ earthly ./go_modules+lint
+```
+
+> **Note**:
+> Any changes to system dependencies or native helpers
+> are automatically reflected the next time an `earthly` command is run.
+
+### Building the container image
+
+Run the `earthly` command with the `docker` target in the top-level directory
+to build and save the image `dependabot/dependabot-core` locally
+with the `latest` tag.
+
+```console
+$ earthly +docker
+
+$ docker run -it dependabot/dependabot-core
+```
+
+For local development,
+pass the `--development=true` argument to build an image
+with debugging utilities and other helpful tools.
+
+```console
+$ earthly +docker --development=true
+
+$ docker run -it dependabot/dependabot-core-development bin/sh
 ```
 
 ### Debugging native helpers
 
-When you're making changes to native helpers or debugging a customer issue you often need to peek inside these scripts that run in a separate process.
+Some Dependabot packages use _native helpers_,
+or small executables written in the ecosystem's native language.
+Native helpers are run in separate processes
+and communicate with the host process using JSON.
 
-Print all log statements from native helpers:
+To print log statements from native helpers,
+set the `DEBUG_HELPERS` environment variable.
 
-```bash
-DEBUG_HELPERS=true bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
+```console
+$ docker run -it dependabot/dependabot-core-development \
+    DEBUG_HELPERS=true bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
 ```
 
-Pause execution to debug a single native helper function:
+To pause execution and debug a single native helper function,
+set the `DEBUG_FUNCTION` environment variable to the name of that function.
 
-```bash
-DEBUG_FUNCTION=parsed_gemfile bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
+```console
+$ docker run -it dependabot/dependabot-core-development \
+    DEBUG_FUNCTION=parsed_gemfile bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
 ```
 
-The function maps to a native helper function name, for example, one of the functions in `bundler/helpers/v2/lib/functions.rb`.
+### Debugging with Visual Studio Code and Docker
 
-When this function is being executed a `debugger` is inserted, pausing execution of the `bin/dry-run.rb` script, this leaves the current updates tmp directory in place allowing you to cd into the directory and run the native helper function directly:
+Visual Studio Code has built-in support for
+[debugging Docker containers][vsc-remote-containers].
+Install the  [Remote - Containers extension][vsc-remote-containers-ext],
+open the Command Palette (<kbd>⇧</kbd><kbd>⌘</kbd><kbd>P</kbd>),
+and select "Remote-Containers: Reopen in Container".
 
-```bash
- DEBUG_FUNCTION=parsed_gemfile bin/dry-run.rb bundler dependabot/demo --dir="/ruby"
-=> fetching dependency files
-=> dumping fetched dependency files: ./dry-run/dependabot/demo/ruby
-=> parsing dependency files
-$ cd /home/dependabot/dependabot-core/tmp/dependabot_TEMP/ruby && echo "{\"function\":\"parsed_gemfile\",\"args\":{\"gemfile_name\":\"Gemfile\",\"lockfile_name\":\"Gemfile.lock\",\"dir\":\"/home/dependabot/dependabot-core/tmp/dependabot_TEMP/ruby\"}}" | BUNDLER_VERSION=1.17.3 BUNDLE_GEMFILE=/opt/bundler/v1/Gemfile GEM_HOME=/opt/bundler/v1/.bundle bundle exec ruby /opt/bundler/v1/run.rb
+Run the "Debug Dry Run" configuration (<kbd>F5</kbd>),
+and you'll be prompted for an ecosystem and repository to perform a dry run.
+
+You can also debug individual tests;
+run the "Debug Tests" configuration (<kbd>F5</kbd>)
+and you'll be prompted for an ecosystem and rspec path.
+
+> **Note**:
+> The `Clone Repository ...` commands of the Remote Containers extension
+> aren't currently supported.
+> Instead, clone the repository manually
+> and use the `Reopen in Container` or `Open Folder in Container...` commands.
+
+### Profiling
+
+You can profile a dry-run by passing the `--profile` flag,
+or by tagging an rspec test with `:profile` and running `rspec`.
+The resulting profile information will be written to
+a `stackprof-<id>.dump` file in the `tmp/` directory,
+You can generate a flamegraph from this file by running the following command:
+
+```console
+$ stackprof --d3-flamegraph tmp/stackprof-<id>.dump > tmp/flamegraph.html
 ```
-
-Copy and run the `cd... ` command:
-
-```bash
-cd /home/dependabot/dependabot-core/tmp/dependabot_TEMP/ruby && echo "{\"function\":\"parsed_gemfile\",\"args\":{\"gemfile_name\":\"Gemfile\",\"lockfile_name\":\"Gemfile.lock\",\"dir\":\"/home/dependabot/dependabot-core/tmp/dependabot_TEMP/ruby\"}}" | BUNDLER_VERSION=1.17.3 BUNDLE_GEMFILE=/opt/bundler/v1/Gemfile GEM_HOME=/opt/bundler/v1/.bundle bundle exec ruby /opt/bundler/v1/run.rb
-```
-
-This should log out the output of the `parsed_gemfile` function:
-
-```
-{"result":[{"name":"business","requirement":"~> 1.0.0","groups":["default"],"source":null,"type":"runtime"},{"name":"uk_phone_numbers","requirement":"~> 0.1.0","groups":["default"],"source":null,"type":"runtime"}]}
-```
-
-Edit the native helper function and re-run the above, for example: `vi /opt/bundler/v1/lib/functions/file_parser.rb`.
-
-### Building the development image from source
-
-The developer shell uses volume mounts to incorporate your local changes to Dependabot's source
-code. If you need to make changes to the development shell itself, you can rebuild it locally.
-
-Start by building the initial Dependabot Core image, or pull it from the
-Docker registry.
-
-```shell
-$ docker pull dependabot/dependabot-core # OR
-$ docker build -f Dockerfile -t dependabot/dependabot-core . # This may take a while
-```
-
-Once you have the base Docker image, you can build and run the development
-container using the `docker-dev-shell` script. The script will automatically
-build the container if it's not present and can be forced to rebuild with the
-`--rebuild` flag. The image includes all dependencies, and the script runs the
-image, mounting the local copy of Dependabot Core so changes made locally will
-be reflected inside the container. This means you can continue to use your
-editor of choice while running the tests inside the container.
-
-```shell
-$ bin/docker-dev-shell
-=> building image from Dockerfile.development
-=> running docker development shell
-[dependabot-core-dev] ~/dependabot-core $
-[dependabot-core-dev] ~/dependabot-core $ cd go_modules && rspec spec # to run tests for a particular package
-```
-
-## Running locally on your computer
-
-To work with Dependabot packages on your local machine you will need Ruby and the package's specific language installed.
-
-For some languages there are additional steps required, please refer to the README file in each package.
-
-## Debugging with Visual Studio Code and Docker
-
-There's built-in support for leveraging Visual Studio Code's [ability for
-debugging][vsc-remote-containers] inside a Docker container.
-After installing the recommended [`Remote - Containers` extension][vsc-remote-containers-ext],
-simply press `Ctrl+Shift+P` (`⇧⌘P` on macOS) and select `Remote-Containers: Reopen in Container`.
-You can also access the dropdown by clicking on the green button in the bottom-left corner of the editor.
-If the development Docker image isn't present on your machine, it will be built automatically.
-Once that's finished, start the `Debug Dry Run` configuration `(F5)` and you'll be prompted
-to select a package manager and a repository to perform a dry run on.
-Feel free to place breakpoints on the code.
-
-There is also support to debug individual test runs by running the `Debug Tests` configuration `(F5)`
-and you'll be promted to select an ecosystem and provide an rspec path.
-
-⚠️ The `Clone Repository ...` commands of the Remote Containers extension are currently
-missing some functionality and are therefore not supported. You have to clone the
-repository manually and use the `Reopen in Container` or `Open Folder in Container...`
-command.
 
 ## Releasing
 
@@ -278,14 +263,6 @@ The high-level flow looks like this:
 This is a "meta" gem, that simply depends on all the others. If you want to
 automatically include support for all languages, you can just include this gem
 and you'll get all you need.
-
-## Profiling
-
-You can profile a dry-run by passing the `--profile` flag when running it, or
-tag an rspec test with `:profile`. This will generate a
-`stackprof-<datetime>.dump` file in the `tmp/` folder, and you can generate a
-flamegraph from this by running:
-`stackprof --d3-flamegraph tmp/stackprof-<data or spec name>.dump > tmp/flamegraph.html`.
 
 ## Why is this public?
 
