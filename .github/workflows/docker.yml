@@ -1,6 +1,5 @@
-name: Push docker images
+name: Push Docker Images
 env:
-  BASE_IMAGE: "ubuntu:18.04"
   CORE_IMAGE: "dependabot/dependabot-core"
   CORE_IMAGE_MIRROR: "ghcr.io/dependabot/dependabot-core"
 on:
@@ -11,7 +10,7 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+
 jobs:
   push-core-image:
-    name: Push dependabot-core image to docker hub
+    name: Push dependabot-core image
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'dependabot/dependabot-core' }}
     permissions:
@@ -20,28 +19,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Build dependabot-core image
-        env:
-          DOCKER_BUILDKIT: 1
-        run: |
-          docker build \
-            -t "$CORE_IMAGE:latest" \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from "$BASE_IMAGE" \
-            --cache-from "$CORE_IMAGE:latest" \
-            .
       - name: Log in to the Docker registry
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
       - name: Log in to GHCR
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Setup Earthly
+        uses: earthly/actions-setup@v1
+        with:
+          version: "v0.6.10"
+      - name: Build and push dependabot-core image
+        run: |
+          earthly --ci --push --remote-cache=$CORE_IMAGE --max-remote-cache +docker --tag=latest
       - name: Push latest image
         run: |
-          docker push "$CORE_IMAGE:latest"
           docker tag "$CORE_IMAGE:latest" "$CORE_IMAGE_MIRROR:latest"
           docker push "$CORE_IMAGE_MIRROR:latest"
-      - name: Push tagged image
+      - name: Push image version tags
         if: "contains(github.ref, 'refs/tags')"
         run: |
           VERSION="$(grep -Eo "[0-9]+\.[0-9]+\.[0-9]+" common/lib/dependabot/version.rb)"
@@ -61,24 +56,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Build dependabot-core image
-        env:
-          DOCKER_BUILDKIT: 1
-        run: |
-          docker build \
-            -t "$DEV_IMAGE:latest" \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from "$BASE_IMAGE" \
-            --cache-from "$CORE_IMAGE:latest" \
-            --cache-from "$DEV_IMAGE:latest" \
-            -f Dockerfile.development .
       - name: Log in to GHCR
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Push latest image
+      - name: Build and push dependabot-core-development image
         run: |
-          docker push "$DEV_IMAGE:latest"
-      - name: Push tagged image
+          earthly --ci --push --remote-cache=$CORE_IMAGE --max-remote-cache +docker --tag=latest --development=true
+      - name: Push image version tags
         if: "contains(github.ref, 'refs/tags')"
         run: |
           VERSION="$(grep -Eo "[0-9]+\.[0-9]+\.[0-9]+" common/lib/dependabot/version.rb)"
