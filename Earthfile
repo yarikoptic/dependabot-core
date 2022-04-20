@@ -38,6 +38,12 @@ deps:
 docker:
     FROM +deps
 
+    LABEL org.opencontainers.image.title="dependabot-core"
+    LABEL org.opencontainers.image.source="https://github.com/dependabot/dependabot-core"
+    LABEL org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    LABEL org.opencontainers.image.revision="$(git rev-parse HEAD)"
+    LABEL org.opencontainers.image.version="$(git describe --tags --abbrev=0)"
+
     ARG development
     ARG tag="latest"
 
