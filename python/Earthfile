@@ -11,8 +11,8 @@ SETUP:
 
     USER root
 
-    RUN apt-get update && \
-        apt-get install -y --no-install-recommends \
+    RUN apt-get update \
+     && apt-get install -y --no-install-recommends \
             libpq-dev \
             libssl-dev \
             libbz2-dev \
@@ -30,7 +30,8 @@ SETUP:
             libxmlsec1-dev \
             libgeos-dev \
             python3-enchant \
-            python3-pip
+            python3-pip \
+     && rm -rf /var/lib/apt/lists/*
 
     DO ../common+CREATE_DEPENDABOT_USER
     COPY --chown=dependabot:dependabot +helpers/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/python/helpers
