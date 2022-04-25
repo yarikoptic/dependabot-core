@@ -35,6 +35,12 @@ deps:
             make \
      && rm -rf /var/lib/apt/lists/*
 
+all:
+    BUILD \
+        --platform=linux/amd64 \
+        --platform=linux/arm64 \
+        +docker
+
 docker:
     FROM +deps
 
