@@ -35,6 +35,35 @@ deps:
             make \
      && rm -rf /var/lib/apt/lists/*
 
+rubocop:
+    FROM ruby:2.7.1
+
+    ARG version=1.29.0
+
+    RUN gem install rubocop -v ${version} --no-document
+
+    WORKDIR /app
+    VOLUME /app
+
+    ENTRYPOINT [ "rubocop" ]
+
+    SAVE IMAGE rubocop
+
+lint:
+    LOCALLY
+
+    ARG autocorrect
+    ARG --required path
+
+    WITH DOCKER --load=+rubocop
+        RUN docker run \
+            --rm \
+            -v $PWD:/app \
+            rubocop \
+            ${autocorrect:+"-A"} \
+            $path
+    END
+
 all:
     BUILD \
         --platform=linux/amd64 \
