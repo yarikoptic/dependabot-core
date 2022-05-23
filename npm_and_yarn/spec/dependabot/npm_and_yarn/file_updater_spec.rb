@@ -3481,5 +3481,19 @@ RSpec.describe Dependabot::NpmAndYarn::FileUpdater do
         end
       end
     end
+
+    context "with pnpm lockfile", :pnpm do
+      let(:files) { project_dependency_files("pnpm/simple") }
+
+      it "updates the files" do
+        expect { updated_files }.to_not(change { Dir.entries(tmp_path) })
+        updated_files.each { |f| expect(f).to be_a(Dependabot::DependencyFile) }
+        expect(updated_files.count).to eq(1)
+      end
+
+      it "native helpers don't output to stdout" do
+        expect { updated_files }.to_not output.to_stdout
+      end
+    end
   end
 end
