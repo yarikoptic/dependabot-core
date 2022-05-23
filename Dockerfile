@@ -99,12 +99,14 @@ USER root
 
 ### JAVASCRIPT
 
-# Install Node 16.0 and npm v8
+# Install Node 16.0, npm v8, and pnpm v7
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g npm@v8.5.1 \
-  && rm -rf ~/.npm
+  && rm -rf ~/.npm \
+  && corepack prepare --activate pnpm@7.1.3 --activate \
+  && corepack enable pnpm
 
 
 ### ELM
