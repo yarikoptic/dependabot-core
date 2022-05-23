@@ -10,6 +10,7 @@ module Dependabot
     class FileUpdater < Dependabot::FileUpdaters::Base
       require_relative "file_updater/package_json_updater"
       require_relative "file_updater/npm_lockfile_updater"
+      require_relative "file_updater/pnpm_lockfile_updater"
       require_relative "file_updater/yarn_lockfile_updater"
 
       class NoChangeError < StandardError
@@ -28,15 +29,22 @@ module Dependabot
           /^package\.json$/,
           /^package-lock\.json$/,
           /^npm-shrinkwrap\.json$/,
-          /^yarn\.lock$/
+          /^yarn\.lock$/,
+          /^pnpm-lock\.yaml$/
         ]
       end
 
       def updated_dependency_files
         updated_files = []
 
-        updated_files += updated_manifest_files
-        updated_files += updated_lockfiles
+        case detected_package_manager
+        when /pnpm/
+          pnpm_lockfile_updater.update_with_pnpm!
+          updated_files += pnpm_lockfile_updater.updated_dependency_files
+        else
+          updated_files += updated_manifest_files
+          updated_files += updated_lockfiles
+        end
 
         if updated_files.none?
           raise NoChangeError.new(
@@ -57,6 +65,15 @@ module Dependabot
       end
 
       private
+
+      def detected_package_manager
+        return @detected_package_manager if defined? @detected_package_manager
+
+        @detected_package_manager ||= begin
+          content = package_files.first.content
+          JSON.parse(content)["packageManager"] if content
+        end
+      end
 
       def filtered_dependency_files
         @filtered_dependency_files ||=
@@ -173,6 +190,15 @@ module Dependabot
       def yarn_lockfile_updater
         @yarn_lockfile_updater ||=
           YarnLockfileUpdater.new(
+            dependencies: dependencies,
+            dependency_files: dependency_files,
+            credentials: credentials
+          )
+      end
+
+      def pnpm_lockfile_updater
+        @pnpm_lockfile_updater ||=
+          PnpmLockfileUpdater.new(
             dependencies: dependencies,
             dependency_files: dependency_files,
             credentials: credentials
