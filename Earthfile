@@ -106,9 +106,29 @@ docker:
 
     COPY --chown=dependabot:dependabot LICENSE /home/dependabot
 
-    WORKDIR /home/dependabot/dependabot-core
+    USER dependabot
 
-    COPY --chown=dependabot:dependabot --dir \
+    ENV HOME="/home/dependabot"
+    WORKDIR ${HOME}
+
+    ENTRYPOINT ["/bin/sh"]
+
+    IF [ $development ]
+        USER root
+
+        RUN --mount=type=cache,target=/var/cache/apt \
+            apt-get update \
+         && apt-get install -y \
+                vim \
+                strace \
+                ltrace \
+                gdb \
+                shellcheck \
+         && rm -rf /var/lib/apt/lists/*
+
+        WORKDIR /home/dependabot/dependabot-core
+
+        COPY --chown=dependabot:dependabot --dir \
             omnibus \
             git_submodules \
             terraform \
@@ -129,29 +149,36 @@ docker:
             common \
             .
 
-    USER dependabot
-
-    ENV HOME="/home/dependabot"
-    WORKDIR ${HOME}
-
-    ENTRYPOINT ["/bin/sh"]
-
-    IF [ $development ]
-        USER root
-
-        RUN apt-get update \
-         && apt-get install -y \
-                vim \
-                strace \
-                ltrace \
-                gdb \
-                shellcheck \
-         && rm -rf /var/lib/apt/lists/*
-  
-        USER dependabot
 
         DO ./common/+CONFIGURE_GIT_USER
 
+        # Install Ruby dependencies
+        RUN cd common \
+         && bundle install
+
+        RUN GREEN='\033[0;32m'; NC='\033[0m'; \
+            for d in `find $PWD -type f -mindepth 2 -maxdepth 2 \
+                # -not -path "$PWD/common/Gemfile" \
+                -name 'Gemfile' | xargs dirname`; do \
+                echo && \
+                echo "---------------------------------------------------------------------------" && \
+                echo "Installing gems for ${GREEN}$(realpath --relative-to=$PWD $d)${NC}..." && \
+                echo "---------------------------------------------------------------------------" && \
+                cd $d && bundle install; \
+            done
+        RUN cd omnibus \
+         && bundle install
+
+        # Make omnibus gems available to bundler in root directory
+        RUN echo 'eval_gemfile File.join(File.dirname(__FILE__), "omnibus/Gemfile")' > Gemfile
+
+        USER dependabot
+
+        # Create directory for volume containing VSCode extensions,
+        # to avoid reinstalling on image rebuilds
+        RUN mkdir -p ~/.vscode-server ~/.vscode-server-insiders
+
+        # Declare pass-thru environment variables used for debugging
         ENV LOCAL_GITHUB_ACCESS_TOKEN=""
         ENV LOCAL_CONFIG_VARIABLES=""
 
