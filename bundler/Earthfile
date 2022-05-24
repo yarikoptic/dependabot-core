@@ -7,7 +7,7 @@ ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
 
 ARG RUBY_VERSION=2.7.1
 ARG BUNDLER_V1_VERSION=1.17.3
-ARG BUNDLER_V2_VERSION=2.3.10
+ARG BUNDLER_V2_VERSION=2.3.13
 ARG RUBYGEMS_SYSTEM_VERSION=3.2.20
 
 SETUP:
@@ -30,7 +30,7 @@ SETUP:
             "ruby${RUBY_VERSION%.*}" \
             "ruby${RUBY_VERSION%.*}-dev" \
      && rm -rf /var/lib/apt/lists/* \
-     && gem update --system --no-document \
+     && gem update --system $RUBYGEMS_SYSTEM_VERSION --no-document \
      && gem install bundler --no-document \
      && rm -rf /var/lib/gems/*/cache/*
 

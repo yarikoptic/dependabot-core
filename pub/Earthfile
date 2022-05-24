@@ -4,7 +4,7 @@ WORKDIR /dependabot-pub
 
 ARG DART_VERSION=2.15.1
 ARG FLUTTER_VERSION=2.8.1
-ARG PUB_REF=62bb244059415cf0c78b24151472efd46ad7569a
+ARG PUB_REF=1e3c17ea871e6a80c720aa998f37cbd3913bc287
 
 SETUP:
     COMMAND
@@ -27,7 +27,7 @@ SETUP:
      && unzip "/tmp/dart-sdk.zip" -d $DEPENDABOT_NATIVE_HELPERS_PATH/dart > /dev/null \
      && chmod -R o+rx $DEPENDABOT_NATIVE_HELPERS_PATH/dart/dart-sdk \
      && rm "/tmp/dart-sdk.zip"
-    
+
     ENV PATH="$DEPENDABOT_NATIVE_HELPERS_PATH/dart/dart-sdk/bin:$PATH"
 
     # We pull the dependency_services from the dart-lang/pub repo as it is not
