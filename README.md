@@ -58,7 +58,7 @@ the package manager and a whole GitHub repo name (i.e. `user/repo`),
 and prints the diff that would be generated to standard output.
 
 ```bash
-$ docker run -it dependabot/dependabot-core \
+$ docker run -it dependabot/dependabot-core-development \
     bin/dry-run.rb go_modules rsc/quote
 => fetching dependency files
 => parsing dependency files

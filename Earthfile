@@ -111,7 +111,7 @@ docker:
     ENV HOME="/home/dependabot"
     WORKDIR ${HOME}
 
-    ENTRYPOINT ["/bin/sh"]
+    CMD [ "/bin/sh" ]
 
     IF [ $development ]
         USER root
@@ -125,6 +125,8 @@ docker:
                 gdb \
                 shellcheck \
          && rm -rf /var/lib/apt/lists/*
+
+        USER dependabot
 
         WORKDIR /home/dependabot/dependabot-core
 
@@ -149,6 +151,7 @@ docker:
             common \
             .
 
+        USER root
 
         DO ./common/+CONFIGURE_GIT_USER
 
@@ -173,6 +176,8 @@ docker:
         RUN echo 'eval_gemfile File.join(File.dirname(__FILE__), "omnibus/Gemfile")' > Gemfile
 
         USER dependabot
+
+        COPY --chown=dependabot:dependabot --dir bin .
 
         # Create directory for volume containing VSCode extensions,
         # to avoid reinstalling on image rebuilds
