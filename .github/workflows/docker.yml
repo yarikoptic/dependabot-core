@@ -61,7 +61,7 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push dependabot-core-development image
         run: |
-          earthly --ci --push --remote-cache=$CORE_IMAGE --max-remote-cache +docker --tag=latest --development=true
+          earthly --ci --push --remote-cache=$CORE_IMAGE --max-remote-cache +all --tag=latest --development=true
       - name: Push image version tags
         if: "contains(github.ref, 'refs/tags')"
         run: |
