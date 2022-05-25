@@ -1,5 +1,6 @@
 VERSION 0.6
-FROM ruby:2.7.1
+FROM ../common+base
+
 WORKDIR /dependabot-npm_and_yarn
 
 ENV DEPENDABOT_NATIVE_HELPERS_PATH="/opt"

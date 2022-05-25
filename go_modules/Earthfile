@@ -1,5 +1,6 @@
 VERSION 0.6
-FROM ruby:2.7.1
+FROM ../common+base
+
 WORKDIR /dependabot-go_modules
 
 ARG GOLANG_VERSION=1.18.1

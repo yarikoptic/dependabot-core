@@ -36,7 +36,7 @@ deps:
      && rm -rf /var/lib/apt/lists/*
 
 rubocop:
-    FROM ruby:2.7.1
+    FROM ./common+base
 
     ARG version=1.29.0
 
