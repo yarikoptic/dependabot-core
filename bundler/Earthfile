@@ -22,18 +22,33 @@ SETUP:
 
     USER root
 
+    ENV RBENV_ROOT="$DEPENDABOT_NATIVE_HELPERS_PATH/.rbenv"
+    ENV PATH="$RBENV_ROOT/shims:$PATH"
+
     RUN apt-get update \
      && apt-get install -y --no-install-recommends \
-            software-properties-common \
-     && apt-add-repository ppa:brightbox/ruby-ng \
-     && apt-get update \
-     && apt-get install -y --no-install-recommends \
-            "ruby${RUBY_VERSION%.*}" \
-            "ruby${RUBY_VERSION%.*}-dev" \
-     && rm -rf /var/lib/apt/lists/* \
+        git \
+        curl \
+        rbenv \
+        libssl-dev \
+        libreadline-dev \
+        zlib1g-dev \
+        autoconf \
+        bison \
+        build-essential \
+        libyaml-dev \
+        libreadline-dev \
+        libncurses5-dev \
+        libffi-dev \
+        libgdbm-dev \
+     && git clone https://github.com/rbenv/ruby-build.git /tmp/ruby-build \
+     && PREFIX=/usr/local /tmp/ruby-build/install.sh \
+     && rbenv install "$RUBY_VERSION" \
+     && rbenv global "$RUBY_VERSION" \
      && gem update --system $RUBYGEMS_SYSTEM_VERSION --no-document \
      && gem install bundler --no-document \
-     && rm -rf /var/lib/gems/*/cache/*
+     && rm -rf /var/lib/gems/*/cache/* \
+     && rm -Rf /tmp/ruby-build*
 
     DO ../common+CREATE_DEPENDABOT_USER
     COPY --chown=dependabot:dependabot +bundler-v1/helpers $DEPENDABOT_NATIVE_HELPERS_PATH/bundler/v1
