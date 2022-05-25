@@ -14,10 +14,9 @@ CREATE_DEPENDABOT_USER:
     ENV DEPENDABOT_NATIVE_HELPERS_PATH=${DEPENDABOT_NATIVE_HELPERS_PATH:-/opt}
 
     RUN groupadd -f --gid "$gid" dependabot \
-     && if ! id -u dependabot; then \
-            useradd --uid "$uid" --gid "$gid" -m dependabot; \
-            mkdir -p $DEPENDABOT_NATIVE_HELPERS_PATH; \
-            chown dependabot:dependabot $DEPENDABOT_NATIVE_HELPERS_PATH; \
+     && if ! (id -u dependabot 2> /dev/null); then \
+            useradd --gid "$gid" --uid "$uid" -m dependabot > /dev/null; \
+            install -g "$gid" -o "$uid" -d $DEPENDABOT_NATIVE_HELPERS_PATH; \
         fi
 
 CONFIGURE_GIT_USER:
