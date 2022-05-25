@@ -44,10 +44,12 @@ helpers:
      && rm terraform-${TARGETARCH}.tar.gz
     SAVE ARTIFACT terraform
 
-    RUN curl -sSLf "https://github.com/tmccombs/hcl2json/releases/download/v${HCL2JSON_VERSION}/hcl2json_${TARGETOS}_${TARGETARCH}" -o hcl2json \
-     && echo "$HCL2JSON_CHECKSUM hcl2json" | sha256sum -c \
-     && chmod +x hcl2json
-    SAVE ARTIFACT hcl2json
+    COPY ../go_modules+go/go /opt/go
+    ENV PATH="/opt/go/bin:PATH"
+
+    ARG GOBIN=/opt/hcl2json
+    RUN go install github.com/tmccombs/hcl2json@v${HCL2JSON_VERSION}
+    SAVE ARTIFACT $GOBIN/hcl2json
 
 deps:
     COPY --dir ../common+shared/common ../common
