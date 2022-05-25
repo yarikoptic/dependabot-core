@@ -5,7 +5,6 @@ WORKDIR /dependabot-hex
 
 ARG ELIXIR_VERSION=1.12.3
 ARG ELIXIR_CHECKSUM=db092caa32b55195eeb24a17e0ab98bb2fea38d2f638bc42fee45a6dfcd3ba0782618d27e281c545651f93914481866b9d34b6d284c7f763d197e87847fdaef4
-ARG ERLANG_VERSION=1:24.2.1-1
 
 SETUP:
     COMMAND
@@ -17,17 +16,16 @@ SETUP:
     ENV PATH="/usr/local/elixir/bin:$PATH"
     ENV MIX_HOME="$DEPENDABOT_NATIVE_HELPERS_PATH/hex/mix"
 
-    RUN curl -sSLfO https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb \
-        && dpkg -i erlang-solutions_2.0_all.deb \
-        && apt-get update \
-        && apt-get install -y --no-install-recommends esl-erlang=${ERLANG_VERSION} \
-        && rm -rf /var/lib/apt/lists/* \
-        && curl -sSLfO https://github.com/elixir-lang/elixir/releases/download/v${ELIXIR_VERSION}/Precompiled.zip \
-        && echo "$ELIXIR_CHECKSUM  Precompiled.zip" | sha512sum -c - \
-        && unzip -d /usr/local/elixir -x Precompiled.zip \
-        && rm -f Precompiled.zip erlang-solutions_2.0_all.deb \
-        && mix local.hex --force \
-        && mix archive.install hex nerves_bootstrap --force
+    RUN apt-get update \
+     && apt-get install -y --no-install-recommends \
+         erlang \
+     && rm -rf /var/lib/apt/lists/* \
+     && curl -sSLfO https://github.com/elixir-lang/elixir/releases/download/v${ELIXIR_VERSION}/Precompiled.zip \
+     && echo "$ELIXIR_CHECKSUM  Precompiled.zip" | sha512sum -c - \
+     && unzip -d /usr/local/elixir -x Precompiled.zip \
+     && rm -f Precompiled.zip \
+     && mix local.hex --force \
+     && mix archive.install hex nerves_bootstrap --force
 
     DO ../common+CREATE_DEPENDABOT_USER
     COPY --chown=dependabot:dependabot +helpers/hex $DEPENDABOT_NATIVE_HELPERS_PATH/hex
