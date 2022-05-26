@@ -3,8 +3,8 @@ FROM ../common+base
 
 WORKDIR /dependabot-pub
 
-ARG DART_VERSION=2.15.1
-ARG FLUTTER_VERSION=2.8.1
+ARG DART_VERSION=2.16.2
+ARG FLUTTER_VERSION=2.10.3
 ARG PUB_REF=1e3c17ea871e6a80c720aa998f37cbd3913bc287
 
 SETUP:
@@ -18,6 +18,7 @@ SETUP:
 
     ENV PUB_CACHE=$DEPENDABOT_NATIVE_HELPERS_PATH/dart/pub-cache
     ENV PUB_ENVIRONMENT="dependabot"
+    ENV PATH="$DEPENDABOT_NATIVE_HELPERS_PATH/dart/dart-sdk/bin:$PATH"
 
     # Install Dart
     RUN DART_ARCH=${TARGETARCH} \
@@ -27,9 +28,8 @@ SETUP:
      && mkdir -p "$PUB_CACHE" \
      && unzip "/tmp/dart-sdk.zip" -d $DEPENDABOT_NATIVE_HELPERS_PATH/dart > /dev/null \
      && chmod -R o+rx $DEPENDABOT_NATIVE_HELPERS_PATH/dart/dart-sdk \
-     && rm "/tmp/dart-sdk.zip"
-
-    ENV PATH="$DEPENDABOT_NATIVE_HELPERS_PATH/dart/dart-sdk/bin:$PATH"
+     && rm "/tmp/dart-sdk.zip" \
+     && dart --version
 
     # We pull the dependency_services from the dart-lang/pub repo as it is not
     # exposed from the Dart SDK (yet...).
@@ -43,8 +43,6 @@ SETUP:
      && tar xf "/tmp/flutter.xz" -C $DEPENDABOT_NATIVE_HELPERS_PATH/dart \
      && rm "/tmp/flutter.xz" \
      && chmod -R o+rx $DEPENDABOT_NATIVE_HELPERS_PATH/dart/flutter \
-     && rm -Rf /opt/dart/flutter/bin/cache/dart-sdk \
-     && ln -s /opt/dart/dart-sdk /opt/dart/flutter/bin/cache/dart-sdk \
      # To reduce space usage we delete all of the flutter sdk except the few
      # things needed for pub resolutions:
      # * The version file
