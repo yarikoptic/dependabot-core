@@ -11,6 +11,9 @@ shared:
     SAVE ARTIFACT .gitignore
 
 deps:
+    ENV LC_ALL="en_US.UTF-8"
+    ENV LANG="en_US.UTF-8"
+
     ARG DEBIAN_FRONTEND="noninteractive"
 
     RUN apt-get update \
@@ -33,6 +36,8 @@ deps:
             openssh-client \
             software-properties-common \
             make \
+            locales \
+     && locale-gen en_US.UTF-8 \
      && rm -rf /var/lib/apt/lists/*
 
 rubocop:
