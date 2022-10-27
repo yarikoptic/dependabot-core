@@ -235,8 +235,9 @@ module Dependabot
 
           # Terraform will occasionally update h1 hashes without updating the version of the dependency
           # Here we make sure the dependency's version actually changes in the lockfile
-          unless updated_dependency.scan(declaration_regex).first.scan(/^\s*version\s*=.*/) ==
-                 content.scan(declaration_regex).first.scan(/^\s*version\s*=.*/)
+          lockfile_version = content&.scan(declaration_regex)&.first&.scan(/^\s*version\s*=.*/)
+          updated_dependency_version = updated_dependency&.scan(declaration_regex)&.first&.scan(/^\s*version\s*=.*/)
+          if !updated_dependency_version.nil? && lockfile_version != updated_dependency_version
             content.sub!(declaration_regex, updated_dependency)
           end
         rescue SharedHelpers::HelperSubprocessFailed => e
