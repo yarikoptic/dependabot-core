@@ -11,9 +11,11 @@ updater/script/build
 docker run --env DEPENDABOT_TEST_ACCESS_TOKEN \
   --pull never \
   --env VCR \
+  --env COVERAGE \
   --rm \
   -v "$(pwd)/updater/spec/fixtures/vcr_cassettes:/home/dependabot/dependabot-updater/spec/fixtures/vcr_cassettes" \
   -v "$(pwd)/npm_and_yarn:/home/dependabot/npm_and_yarn" \
   -v "$(pwd)/go_modules:/home/dependabot/go_modules" \
   -v "$(pwd)/composer:/home/dependabot/composer" \
+  -v "$(pwd)/updater/coverage:/home/dependabot/dependabot-updater/coverage" \
   "ghcr.io/dependabot/dependabot-updater-bundler:latest" bundle exec rspec "${@}"

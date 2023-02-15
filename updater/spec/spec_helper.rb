@@ -21,6 +21,29 @@ require "logger"
 require "vcr"
 require "webmock/rspec"
 
+if ENV["COVERAGE"]
+  require "simplecov"
+  require "simplecov-console"
+
+  SimpleCov::Formatter::Console.output_style = "block"
+  SimpleCov.formatter = if ENV["CI"]
+                          SimpleCov::Formatter::Console
+                        else
+                          SimpleCov::Formatter::HTMLFormatter
+                        end
+
+  SimpleCov.start do
+    add_filter "/spec/"
+    add_filter '/vendor/'
+
+    enable_coverage :branch
+    minimum_coverage line: 80, branch: 70
+    # TODO: Enable minimum coverage per file once outliers have been increased
+    # minimum_coverage_by_file 80
+    refuse_coverage_drop
+  end
+end
+
 # TODO: Stop rescuing StandardError in Dependabot::BaseJob#run
 #
 # For now we log errors as these can surface exceptions that currently get rescued
