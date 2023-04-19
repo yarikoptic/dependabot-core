@@ -54,6 +54,12 @@ module Dependabot
       end
 
       def ecosystem_versions
+        @ecosystem_versions ||= setup_ecosystem_versions
+      end
+
+      private
+
+      def setup_ecosystem_versions
         package_managers = {}
 
         package_managers["npm"] = Helpers.npm_version_numeric(package_lock.content) if package_lock
@@ -67,9 +73,9 @@ module Dependabot
         }
       end
 
-      private
-
       def fetch_files
+        @ecosystem_versions = setup_ecosystem_versions
+
         fetched_files = []
         fetched_files << package_json
         fetched_files += npm_files
@@ -164,7 +170,7 @@ module Dependabot
       def yarn_version
         return @yarn_version if defined?(@yarn_version)
 
-        @yarn_version = package_manager.locked_version("yarn") || guess_yarn_version
+        @yarn_version = package_manager.setup("yarn") || guess_yarn_version
       end
 
       def guess_yarn_version
@@ -176,7 +182,7 @@ module Dependabot
       def pnpm_version
         return @pnpm_version if defined?(@pnpm_version)
 
-        @pnpm_version = package_manager.locked_version("pnpm") || guess_pnpm_version
+        @pnpm_version = package_manager.setup("pnpm") || guess_pnpm_version
       end
 
       def guess_pnpm_version
