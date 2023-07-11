@@ -13,6 +13,8 @@ module Dependabot
         locked_version = requested_version(name) || guessed_version(name)
         return unless locked_version
 
+        check_unsupported_version!(name, locked_version)
+
         _, process = Open3.capture2e("corepack", "prepare", "#{name}@#{locked_version}", "--activate")
 
         # In firewalled environments, we may not be able to download & activate
@@ -26,6 +28,8 @@ module Dependabot
 
         locked_version
       end
+
+      private
 
       def requested_version(name)
         locked = @package_json.fetch("packageManager", nil)
@@ -50,7 +54,19 @@ module Dependabot
         return unless pnpm_lock
         return if Helpers.pnpm8?(pnpm_lock)
 
-        "7.33.3"
+        if Helpers.pnpm7?
+          "7.33.3"
+        else
+          "6.35.1"
+        end
+      end
+
+      def check_unsupported_version!(name, locked_version)
+        return unless name == "pnpm"
+
+        if Version.new(locked_version) < Version.new("7")
+          raise ToolVersionNotSupported.new("PNPM", locked_version, "7.x, 8.x")
+        end
       end
     end
   end

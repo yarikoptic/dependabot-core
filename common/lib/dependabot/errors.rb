@@ -130,6 +130,8 @@ module Dependabot
 
   class DependencyFileNotResolvable < DependabotError; end
 
+  class ToolVersionNotSupported < DependabotError; end
+
   #######################
   # Source level errors #
   #######################

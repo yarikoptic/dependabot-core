@@ -36,6 +36,10 @@ module Dependabot
         pnpm_lock.content.start_with?("lockfileVersion: '6")
       end
 
+      def self.pnpm7?(pnpm_lock)
+        pnpm_lock.content.start_with?("lockfileVersion: 5.4")
+      end
+
       def self.yarn_major_version
         @yarn_major_version ||= fetch_yarn_major_version
       end
