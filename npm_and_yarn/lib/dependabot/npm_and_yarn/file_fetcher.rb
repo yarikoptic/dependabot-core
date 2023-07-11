@@ -186,7 +186,7 @@ module Dependabot
       def guess_pnpm_version
         return unless pnpm_lock
 
-        Helpers.pnpm_major_version
+        Helpers.pnpm_version_numeric(pnpm_lock)
       end
 
       def package_manager
