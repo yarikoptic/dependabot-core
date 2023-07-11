@@ -17,14 +17,6 @@ module Dependabot
         6
       end
 
-      def self.yarn_version_numeric(yarn_lock)
-        if yarn_berry?(yarn_lock)
-          3
-        else
-          1
-        end
-      end
-
       def self.fetch_yarnrc_yml_value(key, default_value)
         if File.exist?(".yarnrc.yml") && (yarnrc = YAML.load_file(".yarnrc.yml"))
           yarnrc.fetch(key, default_value)
@@ -38,6 +30,10 @@ module Dependabot
         yaml.key?("__metadata")
       rescue StandardError
         false
+      end
+
+      def self.pnpm8?(pnpm_lock)
+        pnpm_lock.content.start_with?("lockfileVersion: '6")
       end
 
       def self.yarn_major_version

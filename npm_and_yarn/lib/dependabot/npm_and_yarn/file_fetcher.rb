@@ -170,29 +170,17 @@ module Dependabot
       def yarn_version
         return @yarn_version if defined?(@yarn_version)
 
-        @yarn_version = package_manager.setup("yarn") || guess_yarn_version
-      end
-
-      def guess_yarn_version
-        return unless yarn_lock
-
-        Helpers.yarn_version_numeric(yarn_lock)
+        @yarn_version = package_manager.setup("yarn")
       end
 
       def pnpm_version
         return @pnpm_version if defined?(@pnpm_version)
 
-        @pnpm_version = package_manager.setup("pnpm") || guess_pnpm_version
-      end
-
-      def guess_pnpm_version
-        return unless pnpm_lock
-
-        Helpers.pnpm_major_version
+        @pnpm_version = package_manager.setup("pnpm")
       end
 
       def package_manager
-        @package_manager ||= PackageManager.new(parsed_package_json)
+        @package_manager ||= PackageManager.new(parsed_package_json, lockfiles: { yarn: yarn_lock, pnpm: pnpm_lock })
       end
 
       def package_json
