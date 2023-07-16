@@ -6,6 +6,14 @@ $stdout.sync = true
 
 require "sentry-ruby"
 require "dependabot/setup"
+require "debug"
+
+error = StandardError.new("Bearer SECRET_TOKEN is bad and you should feel bad")
+tags = { update_job_id: ENV.fetch("DEPENDABOT_JOB_ID", "fake-sentry-tag-for-job-id") }
+Sentry.capture_exception(error, tags: tags)
+
+debugger
+
 require "dependabot/file_fetcher_command"
 require "debug" if ENV["DEBUG"]
 

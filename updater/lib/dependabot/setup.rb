@@ -3,6 +3,7 @@
 require "dependabot/logger"
 require "dependabot/logger/formats"
 require "dependabot/environment"
+require "debug"
 
 Dependabot.logger = Logger.new($stdout).tap do |logger|
   logger.level = Dependabot::Environment.log_level
@@ -11,7 +12,13 @@ end
 
 require "dependabot/sentry"
 Sentry.init do |config|
-  debugger
+  # TEST all this with:
+  # $ bin/docker-dev-shell updater
+  # $ cd updater
+  # $ bin/run fetch_files
+
+  config.dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
+
   # config.logger = Dependabot.logger # TODO
   config.project_root = File.expand_path("../../..", __dir__)
 
@@ -45,6 +52,7 @@ Sentry.init do |config|
 
   config.before_send = lambda do |event, hint|
     if hint[:exception]
+      # debugger
       ExceptionSanitizer.sanitize_sentry_exception_event(event, hint)
 
       # TODO integrate our custom `raven_context` methods too... for example code see:

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require "debug"
 
 # ExceptionSanitizer filters potential secrets/PII from exception payloads
 class ExceptionSanitizer
@@ -18,6 +19,7 @@ class ExceptionSanitizer
 
         matches.flatten.compact.each do |match|
           # TODO: Discuss with upstream, because e.value is intended to be read-only, so have to hack around it with `instance_variable_set()`
+          debugger
           e.instance_variable_set(:@value, e.value.gsub(match, "[FILTERED_#{key.to_s.upcase}]"))
         end
       end

@@ -23,11 +23,11 @@ module Dependabot
     end
 
     def self.job_path
-      @job_path ||= environment_variable("DEPENDABOT_JOB_PATH")
+      @job_path ||= environment_variable("DEPENDABOT_JOB_PATH", nil)
     end
 
     def self.output_path
-      @output_path ||= environment_variable("DEPENDABOT_OUTPUT_PATH")
+      @output_path ||= environment_variable("DEPENDABOT_OUTPUT_PATH", nil)
     end
 
     def self.repo_contents_path
@@ -42,9 +42,9 @@ module Dependabot
       @deterministic_updates ||= environment_variable("UPDATER_DETERMINISTIC", false)
     end
 
-    def self.job_definition
-      @job_definition ||= JSON.parse(File.read(job_path))
-    end
+    # def self.job_definition
+    #   @job_definition ||= JSON.parse(File.read(job_path))
+    # end
 
     private_class_method def self.environment_variable(variable_name, default = :_undefined)
       return ENV.fetch(variable_name, default) unless default == :_undefined
@@ -55,7 +55,8 @@ module Dependabot
     end
 
     private_class_method def self.job_debug_enabled?
-      !!job_definition.dig("job", "debug")
+      self.environment_debug_enabled?
+      # !!job_definition.dig("job", "debug")
     end
 
     private_class_method def self.environment_debug_enabled?
