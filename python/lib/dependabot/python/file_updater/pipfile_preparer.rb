@@ -87,8 +87,8 @@ module Dependabot
           details = parsed_lockfile.dig(dep_type, normalise(dep_name))
 
           case details
-          when String then details.gsub(/^==/, "")
-          when Hash then details["version"]&.gsub(/^==/, "")
+          when String then details.delete_prefix("==")
+          when Hash then details["version"]&.delete_prefix("==")
           end
         end
 

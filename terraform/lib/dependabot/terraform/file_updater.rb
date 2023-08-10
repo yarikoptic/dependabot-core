@@ -98,7 +98,7 @@ module Dependabot
       end
 
       def update_git_declaration(new_req, old_req, updated_content, filename)
-        url = old_req.fetch(:source)[:url].gsub(%r{^https://}, "")
+        url = old_req.fetch(:source)[:url].delete_prefix("https://")
         tag = old_req.fetch(:source)[:ref]
         url_regex = /#{Regexp.quote(url)}.*ref=#{Regexp.quote(tag)}/
 

@@ -102,8 +102,7 @@ module Dependabot
 
             version =
               deps.transform_keys { |k| normalise(k) }.
-              dig(dependency.name, "version")&.
-              gsub(/^==/, "")
+              dig(dependency.name, "version")&.delete_prefix("==")
 
             return version
           end
@@ -112,8 +111,7 @@ module Dependabot
             deps = updated_lockfile[keys.fetch(:lockfile)] || {}
             version =
               deps.transform_keys { |k| normalise(k) }.
-              dig(dependency.name, "version")&.
-              gsub(/^==/, "")
+              dig(dependency.name, "version")&.delete_prefix("==")
 
             return version if version
           end
