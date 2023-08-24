@@ -304,6 +304,18 @@ RSpec.describe Dependabot::GoModules::FileParser do
       its(:length) { is_expected.to eq(0) }
     end
 
+    describe "a Go 1.21 repo without a toolchain directive" do
+      let(:go_mod_content) do
+        fixture("projects", "go_1.21", "go.mod")
+      end
+
+      subject(:dependencies) do
+        parser.parse
+      end
+
+      its(:length) { is_expected.to eq(0) }
+    end
+
     context "a monorepo" do
       let(:project_name) { "monorepo" }
       let(:repo_contents_path) { build_tmp_repo(project_name) }
