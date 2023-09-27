@@ -69,6 +69,9 @@ module Dependabot
             deps.each do |name, requirement|
               next unless requirement.is_a?(String)
 
+              # Skip dependencies using Yarn workspace cross-references as requirements
+              next if requirement.start_with?("workspace:")
+
               requirement = "*" if requirement == ""
               dep = build_dependency(
                 file: file, type: type, name: name, requirement: requirement
