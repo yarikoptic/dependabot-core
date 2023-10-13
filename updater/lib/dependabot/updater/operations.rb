@@ -1,4 +1,4 @@
-# typed: false
+# typed: true
 # frozen_string_literal: true
 
 require "dependabot/updater/operations/create_group_security_update_pull_request"
@@ -40,6 +40,7 @@ module Dependabot
         UpdateAllVersions
       ].freeze
 
+      sig { params(job: Dependabot::Job).returns(Dependabot::Updater::Operations::Operation) }
       def self.class_for(job:)
         # Let's not bother generating the string if debug is disabled
         if Dependabot.logger.debug?
