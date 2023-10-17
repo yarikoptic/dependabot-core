@@ -220,8 +220,8 @@ module Dependabot
 
     def initialize(*dependencies)
       @dependencies = dependencies.flatten
-      msg = "The following path based dependencies could not be retrieved: " \
-            "#{@dependencies.join(', ')}"
+      msg = "The following path based dependencies could not be retrieved:\n" \
+            "* #{@dependencies.join("\n* ")}"
       super(msg)
     end
   end

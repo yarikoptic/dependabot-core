@@ -677,8 +677,8 @@ RSpec.describe Dependabot::NpmAndYarn::FileFetcher do
           expect { file_fetcher_instance.files }
             .to raise_error(
               Dependabot::PathDependenciesNotReachable,
-              "The following path based dependencies could not be retrieved: " \
-              "etag"
+              "The following path based dependencies could not be retrieved:\n" \
+              "* etag"
             )
         end
       end
@@ -796,8 +796,8 @@ RSpec.describe Dependabot::NpmAndYarn::FileFetcher do
           expect { file_fetcher_instance.files }
             .to raise_error(
               Dependabot::PathDependenciesNotReachable,
-              "The following path based dependencies could not be retrieved: " \
-              "sprintf-js"
+              "The following path based dependencies could not be retrieved:\n" \
+              "* sprintf-js"
             )
         end
       end

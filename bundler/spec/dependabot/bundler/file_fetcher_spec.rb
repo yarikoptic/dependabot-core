@@ -443,8 +443,8 @@ RSpec.describe Dependabot::Bundler::FileFetcher do
         expect { file_fetcher_instance.files }
           .to raise_error(
             Dependabot::PathDependenciesNotReachable,
-            "The following path based dependencies could not be retrieved: " \
-            "bump-core"
+            "The following path based dependencies could not be retrieved:\n" \
+            "* bump-core"
           )
       end
 
@@ -489,8 +489,8 @@ RSpec.describe Dependabot::Bundler::FileFetcher do
         expect { file_fetcher_instance.files }
           .to raise_error(
             Dependabot::PathDependenciesNotReachable,
-            "The following path based dependencies could not be retrieved: " \
-            "bump-core"
+            "The following path based dependencies could not be retrieved:\n" \
+            "* bump-core"
           )
       end
     end
